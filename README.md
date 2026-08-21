@@ -50,14 +50,27 @@ dry-run, so a free name would actually be claimed by the account making the requ
 account password rather than just a token, and account-mutation endpoints are throttled far more
 tightly than the availability check.
 
+### Which endpoint it uses
+
+Discord has moved this endpoint before, so the app probes candidates on the first check of a run
+and locks onto whichever answers. A 404/405 moves to the next; a 401 or 403 stops the run, because
+that means the path was right and something else is wrong. The footer names the winner.
+
+| Order | Endpoint | Needs a token |
+| --- | --- | --- |
+| 1 | `POST /api/v9/users/@me/pomelo-attempt` | yes |
+| 2 | `POST /api/v9/unique-username/username-attempt` | yes |
+| 3 | `POST /api/v9/unique-username/username-attempt-unauthed` | no |
+
+All three take `{"username": "abcd"}` and answer `{"taken": true|false}`. None of them can claim or
+change a name. As of this build the unauthenticated endpoint 404s, so a token is effectively
+required.
+
 ### About the token
 
-No account is needed. With the token field blank the app calls the same public endpoint the
-Discord signup form uses (`unique-username/username-attempt-unauthed`), which answers
-"is this name taken?" and nothing else.
-
-If you do paste a user token, the app uses the authenticated variant of the same endpoint
-instead. The token is stored in this app's private `SharedPreferences` on your device and is
+The unauthenticated endpoint the Discord signup form used now returns 404, so in practice you
+need a token: with one set the app uses `users/@me/pomelo-attempt`, which answers "is this name
+taken?" and nothing else. The token is stored in this app's private `SharedPreferences` on your device and is
 sent to `discord.com` only. Nothing else is transmitted anywhere.
 
 The app only *asks* whether a name is free — it never registers or claims one. Rate limits are

@@ -17,6 +17,7 @@
     <string name="progress_label">%1$s / %2$s of the space · %3$s%%</string>
     <string name="charset_label">Alphabet %1$s · %2$d ms between checks</string>
     <string name="charset_label_paced">Alphabet %1$s · %2$d ms · %3$d rate limits</string>
+    <string name="charset_label_endpoint">%1$s · %2$d ms · %3$d rate limits · %4$s</string>
 
     <string name="status_free">free</string>
     <string name="status_taken">taken</string>

@@ -17,7 +17,9 @@ data class Stats(
     /** The delay currently in use, which auto-pacing may have raised above the setting. */
     val paceMs: Int = 0,
     /** How many times Discord has rate limited this run. */
-    val rateLimits: Int = 0
+    val rateLimits: Int = 0,
+    /** Which availability endpoint answered, once the client has locked onto one. */
+    val endpoint: String = ""
 )
 
 /**

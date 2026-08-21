@@ -146,6 +146,7 @@ class ScraperService : Service() {
                             available = if (free) it.available + 1 else it.available,
                             ratePerMin = rate,
                             paceMs = paceMs.toInt(),
+                            endpoint = client.activeEndpoint,
                             status = if (prefs.token.isBlank()) "Running" else "Running (token)"
                         )
                     }

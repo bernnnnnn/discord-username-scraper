@@ -121,12 +121,22 @@ class MainActivity : AppCompatActivity() {
         // While a scan is live this shows the delay actually in use, which auto-pacing
         // may have raised above the configured one.
         binding.charsetLabel.text = if (s.running && s.paceMs > 0) {
-            getString(
-                R.string.charset_label_paced,
-                NameSpace.label(prefs.charsetId),
-                s.paceMs,
-                s.rateLimits
-            )
+            if (s.endpoint.isNotEmpty()) {
+                getString(
+                    R.string.charset_label_endpoint,
+                    NameSpace.label(prefs.charsetId),
+                    s.paceMs,
+                    s.rateLimits,
+                    s.endpoint
+                )
+            } else {
+                getString(
+                    R.string.charset_label_paced,
+                    NameSpace.label(prefs.charsetId),
+                    s.paceMs,
+                    s.rateLimits
+                )
+            }
         } else {
             getString(R.string.charset_label, NameSpace.label(prefs.charsetId), prefs.delayMs)
         }
