@@ -203,6 +203,7 @@ class ScraperService : Service() {
                     ScraperState.update {
                         it.copy(
                             status = "Rate limited — waiting ${waitMs / 1000}s$note",
+                            endpoint = client.activeEndpoint,
                             paceMs = paceMs.toInt(),
                             rateLimits = rateLimits
                         )
