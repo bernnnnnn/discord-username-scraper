@@ -90,7 +90,7 @@ class ScraperService : Service() {
                 total = space.total,
                 paceMs = paceMs.toInt(),
                 rateLimits = 0,
-                status = if (prefs.token.isBlank()) "Running" else "Running (token)"
+                status = runStatus(client)
             )
         }
 
@@ -147,7 +147,7 @@ class ScraperService : Service() {
                             ratePerMin = rate,
                             paceMs = paceMs.toInt(),
                             endpoint = client.activeEndpoint,
-                            status = if (prefs.token.isBlank()) "Running" else "Running (token)"
+                            status = runStatus(client)
                         )
                     }
                     if (free) {
@@ -216,6 +216,13 @@ class ScraperService : Service() {
                 }
             }
         }
+    }
+
+    /** Says which endpoint the run settled on, including when a bad token was skipped past. */
+    private fun runStatus(client: DiscordClient): String = when {
+        client.skippedAuth -> "Running — token rejected, using the public check"
+        prefs.token.isNotBlank() -> "Running (token)"
+        else -> "Running"
     }
 
     /** The configured wait plus a little jitter, so requests never land on a fixed cadence. */

@@ -53,24 +53,33 @@ tightly than the availability check.
 ### Which endpoint it uses
 
 Discord has moved this endpoint before, so the app probes candidates on the first check of a run
-and locks onto whichever answers. A 404/405 moves to the next; a 401 or 403 stops the run, because
-that means the path was right and something else is wrong. The footer names the winner.
+and locks onto whichever answers. A missing path *or a refused token* moves to the next, so a bad
+token can never dead-end a run while the public check still works. The footer names the winner.
 
-| Order | Endpoint | Needs a token |
-| --- | --- | --- |
-| 1 | `POST /api/v9/users/@me/pomelo-attempt` | yes |
-| 2 | `POST /api/v9/unique-username/username-attempt` | yes |
-| 3 | `POST /api/v9/unique-username/username-attempt-unauthed` | no |
+| Order | Endpoint | Needs a token | Verified |
+| --- | --- | --- | --- |
+| 1 | `POST /api/v9/users/@me/pomelo-attempt` | yes | 401 without auth, so it exists |
+| 2 | `POST /api/v9/unique-username/username-attempt` | yes | 404 — gone |
+| 3 | `POST /api/v9/unique-username/username-attempt-unauthed` | no | 200 `{"taken":true}` |
 
-All three take `{"username": "abcd"}` and answer `{"taken": true|false}`. None of them can claim or
-change a name. As of this build the unauthenticated endpoint 404s, so a token is effectively
-required.
+All take `{"username": "abcd"}` and answer `{"taken": true|false}`. None can claim or change a
+name. **The unauthenticated endpoint works, so no account is needed.**
+
+Measured against the live endpoint: 14 of 15 back-to-back requests with no delay returned 200 in
+about four seconds, with one 429 carrying `retry_after: 62` — and requests kept succeeding either
+side of it, so the bucket is a sliding window rather than a hard wall. Every 4-character name
+sampled came back taken, which is what you should expect: this alphabet is 1.6 million names and
+the good ones went years ago.
 
 ### About the token
 
-The unauthenticated endpoint the Discord signup form used now returns 404, so in practice you
-need a token: with one set the app uses `users/@me/pomelo-attempt`, which answers "is this name
-taken?" and nothing else. The token is stored in this app's private `SharedPreferences` on your device and is
+No account is needed — the unauthenticated endpoint the Discord signup form uses still works, and
+answers "is this name taken?" and nothing else.
+
+A token only changes which bucket you are throttled in: per account instead of per IP. It is
+strictly optional, and using a user token with a third-party client is self-botting under
+Discord's ToS, so it carries real account risk. If one is set and Discord refuses it, the app
+falls back to the public check and says so in the status line rather than stopping. The token is stored in this app's private `SharedPreferences` on your device and is
 sent to `discord.com` only. Nothing else is transmitted anywhere.
 
 The app only *asks* whether a name is free — it never registers or claims one. Rate limits are

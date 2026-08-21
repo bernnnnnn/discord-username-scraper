@@ -20,14 +20,19 @@ sealed class CheckResult {
 
     /**
      * Transient or fatal failure. [fatal] means stop the run and tell the user.
-     * [missing] marks a 404/405, which during probing means "try the next candidate".
+     * [tryNext] marks a failure that says nothing about the other candidates — a missing path
+     * or a refused credential — so probing should move on rather than give up.
      */
     data class Failure(
         val message: String,
         val fatal: Boolean,
-        val missing: Boolean = false
+        val tryNext: Boolean = false
     ) : CheckResult()
 }
+
+/** First token of a failure message, for a compact "what did we try" list. */
+private fun CheckResult.Failure.shortReason(): String =
+    message.substringBefore(" —").substringBefore(" on ").trim().ifEmpty { "failed" }
 
 /** One candidate availability endpoint. */
 private data class Endpoint(val label: String, val url: String, val needsToken: Boolean)
@@ -66,26 +71,35 @@ class DiscordClient(private val token: String) {
     fun check(username: String): CheckResult {
         resolved?.let { return request(it, username) }
 
-        // First call of the run: find an endpoint that exists. Only a 404/405 moves on;
-        // a 401 or 403 means we found the right path and something else is wrong.
+        // First call of the run: find an endpoint that answers. A missing path or a refused
+        // token says nothing about the remaining candidates, so keep going — a bad token must
+        // never dead-end a run when the public check still works.
         val tried = ArrayList<String>(candidates.size)
+        var last: CheckResult.Failure? = null
         for (candidate in candidates) {
             val result = request(candidate, username)
-            if (result is CheckResult.Failure && result.missing) {
-                tried.add(candidate.label)
+            if (result is CheckResult.Failure && result.tryNext) {
+                tried.add("${candidate.label} (${result.shortReason()})")
+                last = result
                 continue
             }
             resolved = candidate
+            if (tried.isNotEmpty() && !candidate.needsToken && token.isNotBlank()) {
+                skippedAuth = true
+            }
             return result
         }
-        val hint = if (token.isBlank()) {
-            "No working endpoint (tried ${tried.joinToString(", ")}). " +
-                "The public check is gone — add a token in Settings to use the account endpoint."
-        } else {
-            "No working endpoint (tried ${tried.joinToString(", ")}). Discord changed the API."
-        }
-        return CheckResult.Failure(hint, true)
+        return CheckResult.Failure(
+            "No endpoint answered — tried ${tried.joinToString(", ")}. " +
+                (last?.message ?: "Discord changed the API."),
+            true
+        )
     }
+
+    /** True when a token was set but rejected, and the public endpoint is being used instead. */
+    @Volatile
+    var skippedAuth = false
+        private set
 
     private fun request(endpoint: Endpoint, username: String): CheckResult {
         val body = JSONObject().put("username", username).toString().toRequestBody(JSON)
@@ -111,15 +125,15 @@ class DiscordClient(private val token: String) {
                     401 -> CheckResult.Failure(
                         "401 on ${endpoint.label} — token rejected. Paste it without the " +
                             "surrounding quotes, and re-copy it if you changed the password since.",
-                        true
+                        fatal = true, tryNext = true
                     )
                     403 -> CheckResult.Failure(
                         "403 on ${endpoint.label} — Discord refused this request " +
                             "(it blocks datacenter and VPN addresses; try mobile data or home Wi-Fi)",
-                        true
+                        fatal = true, tryNext = true
                     )
                     404, 405 -> CheckResult.Failure(
-                        "HTTP ${resp.code} on ${endpoint.label}", fatal = true, missing = true
+                        "HTTP ${resp.code} on ${endpoint.label}", fatal = true, tryNext = true
                     )
                     in 500..599 -> CheckResult.Failure("Discord returned ${resp.code}", false)
                     else -> CheckResult.Failure("HTTP ${resp.code} on ${endpoint.label}", false)
