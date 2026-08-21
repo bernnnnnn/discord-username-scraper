@@ -65,11 +65,28 @@ token can never dead-end a run while the public check still works. The footer na
 All take `{"username": "abcd"}` and answer `{"taken": true|false}`. None can claim or change a
 name. **The unauthenticated endpoint works, so no account is needed.**
 
-Measured against the live endpoint: 14 of 15 back-to-back requests with no delay returned 200 in
-about four seconds, with one 429 carrying `retry_after: 62` — and requests kept succeeding either
-side of it, so the bucket is a sliding window rather than a hard wall. Every 4-character name
-sampled came back taken, which is what you should expect: this alphabet is 1.6 million names and
-the good ones went years ago.
+### What to expect
+
+Measured against the live endpoint from one address, honouring every `retry_after`:
+
+| Measurement | Result |
+| --- | --- |
+| Cold burst, no delay | 14 of 15 returned 200 in ~4 s |
+| Sustained, over 8 minutes | **14 checks, 7 rate limits, ~1.8 checks/min** |
+| 4-character names sampled | 37, **all taken** |
+| Control (11-char random names) | `{"taken":false}` — the free path works |
+
+The burst is misleading. Once the bucket is empty each 429 carries `retry_after` near 60 s, and
+backoff dominates: in that 8-minute run, 420 of 472 seconds were spent waiting. At ~1.8/min a
+full sweep is roughly **650 days** for `a–z 0–9`, or **180 days** for `a–z`.
+
+So this is a long background grind, not an afternoon. That is what the design is for — progress is
+one integer, the log is permanent, and the app resumes exactly where it stopped. Watch the **Rate**
+tile for the first ten minutes to get your own number, since a mobile or home address may be
+bucketed differently than the datacenter address these figures came from, then multiply.
+
+A token moves you from a per-IP bucket to a per-account one, which is the main lever available if
+the rate is the problem — weighed against the account risk noted above.
 
 ### About the token
 
