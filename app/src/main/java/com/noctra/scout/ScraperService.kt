@@ -73,6 +73,11 @@ class ScraperService : Service() {
         var skipped = 0
         var rejects = 0
         var backoff = 2_000L
+        // Auto-pacing state: paceMs never drops below the configured delay, and climbs
+        // whenever Discord pushes back, so the loop settles on the fastest rate it allows.
+        var paceMs = prefs.delayMs.toLong()
+        var okStreak = 0
+        var rateLimits = 0
         windowStart = System.currentTimeMillis()
         windowCount = 0
 
@@ -83,6 +88,8 @@ class ScraperService : Service() {
                 available = available,
                 cursor = prefs.cursor,
                 total = space.total,
+                paceMs = paceMs.toInt(),
+                rateLimits = 0,
                 status = if (prefs.token.isBlank()) "Running" else "Running (token)"
             )
         }
@@ -128,11 +135,17 @@ class ScraperService : Service() {
                     buffer.add(Entry(name, free, System.currentTimeMillis()))
                     prefs.cursor = cursor + 1
                     countTick()
+                    okStreak++
+                    if (prefs.autoPace && okStreak >= SPEED_UP_AFTER) {
+                        okStreak = 0
+                        paceMs = (paceMs * 9 / 10).coerceAtLeast(prefs.delayMs.toLong())
+                    }
                     ScraperState.update {
                         it.copy(
                             checked = it.checked + 1,
                             available = if (free) it.available + 1 else it.available,
                             ratePerMin = rate,
+                            paceMs = paceMs.toInt(),
                             status = if (prefs.token.isBlank()) "Running" else "Running (token)"
                         )
                     }
@@ -145,7 +158,7 @@ class ScraperService : Service() {
                         flush()
                     }
                     updateNotification()
-                    delay(prefs.delayMs.toLong() + (0..250).random())
+                    delay(pace(paceMs))
                 }
 
                 is CheckResult.Invalid -> {
@@ -164,13 +177,27 @@ class ScraperService : Service() {
                     ScraperState.update { it.copy(checked = it.checked + 1, ratePerMin = rate) }
                     if (buffer.size >= BATCH_SIZE) flush()
                     updateNotification()
-                    delay(prefs.delayMs.toLong())
+                    delay(pace(paceMs))
                 }
 
                 is CheckResult.RateLimited -> {
                     flush()
+                    rateLimits++
+                    okStreak = 0
+                    if (prefs.autoPace) {
+                        val floor = prefs.delayMs.toLong()
+                        // The user's own delay wins if they set one above the pacing ceiling.
+                        val ceiling = maxOf(MAX_PACE_MS, floor)
+                        paceMs = (paceMs * 3 / 2).coerceIn(floor, ceiling)
+                    }
                     val waitMs = result.retryAfterMs
-                    ScraperState.update { it.copy(status = "Rate limited — waiting ${waitMs / 1000}s") }
+                    ScraperState.update {
+                        it.copy(
+                            status = "Rate limited — waiting ${waitMs / 1000}s",
+                            paceMs = paceMs.toInt(),
+                            rateLimits = rateLimits
+                        )
+                    }
                     updateNotification(force = true)
                     delay(waitMs)
                 }
@@ -189,6 +216,9 @@ class ScraperService : Service() {
             }
         }
     }
+
+    /** The configured wait plus a little jitter, so requests never land on a fixed cadence. */
+    private fun pace(paceMs: Long): Long = paceMs + (0..250).random()
 
     private fun countTick() {
         windowCount++
@@ -321,6 +351,8 @@ class ScraperService : Service() {
         private const val FOUND_NOTIF_BASE = 2000
         private const val BATCH_SIZE = 20
         private const val MAX_CONSECUTIVE_REJECTS = 25
+        private const val SPEED_UP_AFTER = 25
+        private const val MAX_PACE_MS = 30_000L
 
         fun start(context: Context) {
             val i = Intent(context, ScraperService::class.java)

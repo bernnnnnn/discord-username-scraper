@@ -117,16 +117,25 @@ class MainActivity : AppCompatActivity() {
             nf.format(total),
             String.format("%.2f", pct)
         )
+
+        // While a scan is live this shows the delay actually in use, which auto-pacing
+        // may have raised above the configured one.
+        binding.charsetLabel.text = if (s.running && s.paceMs > 0) {
+            getString(
+                R.string.charset_label_paced,
+                NameSpace.label(prefs.charsetId),
+                s.paceMs,
+                s.rateLimits
+            )
+        } else {
+            getString(R.string.charset_label, NameSpace.label(prefs.charsetId), prefs.delayMs)
+        }
     }
 
     private fun refreshFooter() {
         val space = prefs.nameSpace()
+        // Emitting new stats re-runs render(), which owns the footer text.
         ScraperState.update { it.copy(total = space.total, cursor = prefs.cursor) }
-        binding.charsetLabel.text = getString(
-            R.string.charset_label,
-            NameSpace.label(prefs.charsetId),
-            prefs.delayMs
-        )
     }
 
     private fun requestNotificationsIfNeeded() {

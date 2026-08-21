@@ -28,9 +28,27 @@ with a matching crescent-moon adaptive launcher icon.
 | Setting | Default | Notes |
 | --- | --- | --- |
 | Character set | `a–z 0–9` (1,679,616 names) | Also `a–z` (456,976) or `a–z 0–9 _` (1,874,161). Changing it restarts the walk but keeps the log. |
-| Delay between checks | 1200 ms | Lower is faster and more likely to hit a rate limit. Minimum 250 ms. |
+| Delay between checks | 1200 ms | The floor. Lower is faster and more likely to hit a rate limit. Minimum 250 ms. |
+| Auto-pace | on | Multiplies the delay by 1.5 on every 429 (up to 30 s) and shaves 10% off after 25 clean checks, so the scan converges on the fastest rate Discord will allow instead of you guessing. |
 | Stop after N found | 0 | 0 keeps scanning forever. |
 | Discord token | empty | Optional — see below. |
+
+### If you keep getting rate limited
+
+Being rate limited is not fatal: the app waits out the exact `retry_after` Discord returns and
+carries on from the same cursor. But if it stalls constantly, in order:
+
+1. **Leave Auto-pace on.** It finds the sustainable rate by itself; the footer shows the delay
+   actually in use and how many 429s this run has taken.
+2. **Add a token** (Settings → Discord token). The unauthenticated endpoint is throttled per IP;
+   the authenticated one is throttled per account, which is usually the more generous bucket.
+3. **Raise the delay floor.** If auto-pacing has parked at the 30 s ceiling, the account or IP is
+   in a slow bucket and a bigger floor will stall less.
+
+There is no way to check faster by attempting a real username change: `PATCH /users/@me` has no
+dry-run, so a free name would actually be claimed by the account making the request, it needs the
+account password rather than just a token, and account-mutation endpoints are throttled far more
+tightly than the availability check.
 
 ### About the token
 

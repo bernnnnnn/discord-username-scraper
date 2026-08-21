@@ -57,6 +57,22 @@
                 android:textSize="14sp" />
         </com.google.android.material.textfield.TextInputLayout>
 
+        <com.google.android.material.materialswitch.MaterialSwitch
+            android:id="@+id/autoPace"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="14dp"
+            android:text="@string/settings_auto_pace"
+            android:textSize="14sp" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:textSize="11sp"
+            android:textColor="@color/muted"
+            android:text="@string/settings_auto_pace_help" />
+
         <com.google.android.material.textfield.TextInputLayout
             style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
             android:layout_width="match_parent"

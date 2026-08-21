@@ -13,7 +13,11 @@ data class Stats(
     val status: String = "Idle",
     val cursor: Long = 0L,
     val total: Long = 0L,
-    val ratePerMin: Int = 0
+    val ratePerMin: Int = 0,
+    /** The delay currently in use, which auto-pacing may have raised above the setting. */
+    val paceMs: Int = 0,
+    /** How many times Discord has rate limited this run. */
+    val rateLimits: Int = 0
 )
 
 /**

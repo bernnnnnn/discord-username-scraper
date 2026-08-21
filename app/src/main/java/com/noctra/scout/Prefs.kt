@@ -29,6 +29,11 @@ class Prefs(context: Context) {
         get() = sp.getInt(KEY_STOP_AFTER, 0)
         set(v) = sp.edit().putInt(KEY_STOP_AFTER, v.coerceAtLeast(0)).apply()
 
+    /** Auto-tune the delay: back off on 429s, creep back toward [delayMs] when they stop. */
+    var autoPace: Boolean
+        get() = sp.getBoolean(KEY_AUTO_PACE, true)
+        set(v) = sp.edit().putBoolean(KEY_AUTO_PACE, v).apply()
+
     /** Optional Discord user token. Stored on this device only; blank = unauthenticated checks. */
     var token: String
         get() = sp.getString(KEY_TOKEN, "").orEmpty()
@@ -53,6 +58,7 @@ class Prefs(context: Context) {
         private const val KEY_CHARSET = "charset"
         private const val KEY_DELAY = "delay_ms"
         private const val KEY_STOP_AFTER = "stop_after"
+        private const val KEY_AUTO_PACE = "auto_pace"
         private const val KEY_TOKEN = "token"
         private const val KEY_RUNNING = "running"
     }

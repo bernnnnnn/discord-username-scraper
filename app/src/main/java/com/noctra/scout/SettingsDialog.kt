@@ -28,6 +28,7 @@ object SettingsDialog {
 
         b.delay.setText(prefs.delayMs.toString())
         b.stopAfter.setText(prefs.stopAfter.toString())
+        b.autoPace.isChecked = prefs.autoPace
         b.token.setText(prefs.token)
 
         MaterialAlertDialogBuilder(context)
@@ -38,6 +39,7 @@ object SettingsDialog {
                 val newDelay = b.delay.text.toString().toIntOrNull() ?: Prefs.DEFAULT_DELAY_MS
                 prefs.delayMs = newDelay
                 prefs.stopAfter = b.stopAfter.text.toString().toIntOrNull() ?: 0
+                prefs.autoPace = b.autoPace.isChecked
                 prefs.token = b.token.text.toString()
                 if (chosenCharset != prefs.charsetId) {
                     // A different alphabet is a different walk, so the cursor has to restart.
