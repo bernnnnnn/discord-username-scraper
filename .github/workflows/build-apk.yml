@@ -41,7 +41,7 @@ jobs:
         id: apk
         run: |
           SRC=app/build/outputs/apk/release/app-release.apk
-          OUT="noctra-${GITHUB_SHA::7}.apk"
+          OUT="noctra.apk"
           cp "$SRC" "$OUT"
           echo "path=$OUT" >> "$GITHUB_OUTPUT"
           ls -lh "$OUT"
@@ -59,7 +59,7 @@ jobs:
           name: Noctra (latest build)
           body: |
             Debug-free release build of Noctra, signed with the repo keystore.
-            Commit `${{ github.sha }}`.
+            Commit `${{ github.sha }}` (`${{ github.ref_name }}`).
 
             Download the `.apk` below and sideload it (Settings -> Apps -> Special access -> Install unknown apps).
           files: ${{ steps.apk.outputs.path }}
