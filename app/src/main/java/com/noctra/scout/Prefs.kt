@@ -37,7 +37,7 @@ class Prefs(context: Context) {
     /** Optional Discord user token. Stored on this device only; blank = unauthenticated checks. */
     var token: String
         get() = sp.getString(KEY_TOKEN, "").orEmpty()
-        set(v) = sp.edit().putString(KEY_TOKEN, v.trim()).apply()
+        set(v) = sp.edit().putString(KEY_TOKEN, sanitizeToken(v)).apply()
 
     /** True while the service is meant to be running (used to restore after a process restart). */
     var running: Boolean
@@ -45,6 +45,22 @@ class Prefs(context: Context) {
         set(v) = sp.edit().putBoolean(KEY_RUNNING, v).apply()
 
     fun nameSpace(): NameSpace = NameSpace.of(charsetId)
+
+    /**
+     * Cleans up a pasted token. localStorage holds the value JSON-encoded, so copying it out of a
+     * storage viewer brings the surrounding quotes along, and Discord rejects the header as
+     * malformed. Whitespace from a wrapped copy and a stray "Bearer " prefix get the same treatment.
+     */
+    private fun sanitizeToken(raw: String): String {
+        var t = raw.trim()
+        if (t.length >= 2 && t.startsWith("\"") && t.endsWith("\"")) {
+            t = t.substring(1, t.length - 1)
+        }
+        if (t.startsWith("Bearer ", ignoreCase = true)) {
+            t = t.substring(7)
+        }
+        return t.filterNot { it.isWhitespace() }
+    }
 
     fun resetProgress() {
         cursor = 0L

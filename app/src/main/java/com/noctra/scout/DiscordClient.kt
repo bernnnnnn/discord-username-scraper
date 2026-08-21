@@ -109,7 +109,9 @@ class DiscordClient(private val token: String) {
                     429 -> CheckResult.RateLimited(parseRetryAfter(text, resp.header("Retry-After")))
                     400 -> parseBadRequest(text)
                     401 -> CheckResult.Failure(
-                        "401 on ${endpoint.label} — the saved token is invalid or expired", true
+                        "401 on ${endpoint.label} — token rejected. Paste it without the " +
+                            "surrounding quotes, and re-copy it if you changed the password since.",
+                        true
                     )
                     403 -> CheckResult.Failure(
                         "403 on ${endpoint.label} — Discord refused this request " +
