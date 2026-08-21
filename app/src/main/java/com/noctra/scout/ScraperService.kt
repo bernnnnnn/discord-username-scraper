@@ -39,9 +39,9 @@ class ScraperService : Service() {
 
     private val buffer = ArrayList<Entry>(BATCH_SIZE)
     private var lastNotify = 0L
-    private var windowStart = 0L
-    private var windowCount = 0
-    private var rate = 0
+    private var runStart = 0L
+    private var runChecks = 0L
+    private var rate = 0.0
 
     override fun onCreate() {
         super.onCreate()
@@ -78,8 +78,9 @@ class ScraperService : Service() {
         var paceMs = prefs.delayMs.toLong()
         var okStreak = 0
         var rateLimits = 0
-        windowStart = System.currentTimeMillis()
-        windowCount = 0
+        runStart = System.currentTimeMillis()
+        runChecks = 0L
+        rate = 0.0
 
         ScraperState.update {
             it.copy(
@@ -189,7 +190,9 @@ class ScraperService : Service() {
                         val floor = prefs.delayMs.toLong()
                         // The user's own delay wins if they set one above the pacing ceiling.
                         val ceiling = maxOf(MAX_PACE_MS, floor)
-                        paceMs = (paceMs * 3 / 2).coerceIn(floor, ceiling)
+                        // Jump straight to the rate the run has actually sustained instead of
+                        // creeping toward it, since every overshoot costs another long stall.
+                        paceMs = maxOf(paceMs * 3 / 2, sustainedIntervalMs()).coerceIn(floor, ceiling)
                     }
                     val waitMs = result.retryAfterMs
                     val note = if (result.shared) {
@@ -234,14 +237,19 @@ class ScraperService : Service() {
     private fun pace(paceMs: Long): Long = paceMs + (0..250).random()
 
     private fun countTick() {
-        windowCount++
-        val now = System.currentTimeMillis()
-        val elapsed = now - windowStart
-        if (elapsed >= 30_000L) {
-            rate = (windowCount * 60_000L / elapsed).toInt()
-            windowStart = now
-            windowCount = 0
-        }
+        runChecks++
+        val elapsed = System.currentTimeMillis() - runStart
+        if (elapsed > 0L) rate = runChecks * 60_000.0 / elapsed
+    }
+
+    /**
+     * Milliseconds per check this run has actually sustained, stalls included. Pacing at this
+     * interval is what the endpoint is already giving us, so it is the floor worth aiming for
+     * rather than creeping up 50% at a time and buying another multi-minute stall each step.
+     */
+    private fun sustainedIntervalMs(): Long {
+        if (runChecks <= 0L) return 0L
+        return (System.currentTimeMillis() - runStart) / runChecks
     }
 
     private fun flush() {
@@ -368,7 +376,7 @@ class ScraperService : Service() {
         // after a long clean streak, and in small steps. Speeding up eagerly just buys another
         // stall: measured against the live endpoint, backoff ate 420 of 472 seconds.
         private const val SPEED_UP_AFTER = 200
-        private const val MAX_PACE_MS = 30_000L
+        private const val MAX_PACE_MS = 90_000L
 
         fun start(context: Context) {
             val i = Intent(context, ScraperService::class.java)

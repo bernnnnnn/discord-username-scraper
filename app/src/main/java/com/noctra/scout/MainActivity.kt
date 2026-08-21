@@ -97,7 +97,7 @@ class MainActivity : AppCompatActivity() {
     private fun render(s: Stats) {
         binding.statChecked.text = nf.format(s.checked)
         binding.statAvailable.text = nf.format(s.available)
-        binding.statRate.text = if (s.ratePerMin > 0) "${s.ratePerMin}/min" else "—"
+        binding.statRate.text = formatRate(s.ratePerMin)
 
         binding.toggle.text = getString(if (s.running) R.string.stop else R.string.start)
         binding.status.text = when {
@@ -116,7 +116,7 @@ class MainActivity : AppCompatActivity() {
             nf.format(s.cursor),
             nf.format(total),
             String.format("%.2f", pct)
-        )
+        ) + eta(s, total)
 
         // While a scan is live this shows the delay actually in use, which auto-pacing
         // may have raised above the configured one.
@@ -140,6 +140,27 @@ class MainActivity : AppCompatActivity() {
         } else {
             getString(R.string.charset_label, NameSpace.label(prefs.charsetId), prefs.delayMs)
         }
+    }
+
+    /** Sub-1/min rates floor to zero as integers, which is exactly when the number matters most. */
+    private fun formatRate(perMin: Double): String = when {
+        perMin <= 0.0 -> "—"
+        perMin >= 10 -> "${perMin.toInt()}/min"
+        perMin >= 1 -> String.format("%.1f/min", perMin)
+        else -> String.format("%.0f/hr", perMin * 60)
+    }
+
+    /** What the observed rate implies for finishing the space. */
+    private fun eta(s: Stats, total: Long): String {
+        if (s.ratePerMin <= 0.0 || total <= s.cursor) return ""
+        val minutes = (total - s.cursor) / s.ratePerMin
+        val text = when {
+            minutes >= 1440 * 365 -> String.format("%.1f years", minutes / (1440.0 * 365))
+            minutes >= 1440 -> String.format("%.0f days", minutes / 1440)
+            minutes >= 60 -> String.format("%.0f hours", minutes / 60)
+            else -> String.format("%.0f min", minutes)
+        }
+        return " · $text left at this rate"
     }
 
     private fun refreshFooter() {
