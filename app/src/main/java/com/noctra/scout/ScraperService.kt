@@ -192,9 +192,14 @@ class ScraperService : Service() {
                         paceMs = (paceMs * 3 / 2).coerceIn(floor, ceiling)
                     }
                     val waitMs = result.retryAfterMs
+                    val note = if (result.shared) {
+                        " · public endpoint is a shared pool, add a token in Settings"
+                    } else {
+                        ""
+                    }
                     ScraperState.update {
                         it.copy(
-                            status = "Rate limited — waiting ${waitMs / 1000}s",
+                            status = "Rate limited — waiting ${waitMs / 1000}s$note",
                             paceMs = paceMs.toInt(),
                             rateLimits = rateLimits
                         )

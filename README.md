@@ -69,24 +69,33 @@ name. **The unauthenticated endpoint works, so no account is needed.**
 
 Measured against the live endpoint from one address, honouring every `retry_after`:
 
-| Measurement | Result |
+| Measurement (public endpoint) | Result |
 | --- | --- |
 | Cold burst, no delay | 14 of 15 returned 200 in ~4 s |
-| Sustained, over 8 minutes | **14 checks, 7 rate limits, ~1.8 checks/min** |
+| Sustained, honouring `retry_after` | 14 checks, 7 rate limits, ~1.8 checks/min |
+| Steady 3 s cadence, 45 requests | **8 ok, 37 refused — 3.3 checks/min** |
+| `retry_after` seen | 60–260 s |
 | 4-character names sampled | 37, **all taken** |
 | Control (11-char random names) | `{"taken":false}` — the free path works |
 
-The burst is misleading. Once the bucket is empty each 429 carries `retry_after` near 60 s, and
-backoff dominates: in that 8-minute run, 420 of 472 seconds were spent waiting. At ~1.8/min a
-full sweep is roughly **650 days** for `a–z 0–9`, or **180 days** for `a–z`.
+The decisive detail is in the 429 headers:
 
-So this is a long background grind, not an afternoon. That is what the design is for — progress is
-one integer, the log is permanent, and the app resumes exactly where it stopped. Watch the **Rate**
-tile for the first ten minutes to get your own number, since a mobile or home address may be
-bucketed differently than the datacenter address these figures came from, then multiply.
+```
+x-ratelimit-scope: shared
+```
 
-A token moves you from a per-IP bucket to a per-account one, which is the main lever available if
-the rate is the problem — weighed against the account risk noted above.
+The unauthenticated endpoint is **one global pool shared by everyone using it**, not a per-IP
+allowance — and it is permanently drained, presumably by every other tool doing this. No pacing
+strategy wins a contended shared bucket; ~3 checks/min is simply what is left over. At that rate a
+full sweep is not a real plan.
+
+`users/@me/pomelo-attempt` is scoped per user instead, which is why runs with a token hit the limit
+far less. **If you want to sweep the space, the token is not an optimisation, it is the only
+version of this that works.** The app already prefers that endpoint when a token is set, and now
+names the shared pool in the status line when it is throttled without one.
+
+Whatever endpoint you land on, read the **Rate** tile after ten minutes and multiply: that number
+× 1,440 is your names per day, against 1,679,616 for `a–z 0–9` or 456,976 for `a–z`.
 
 ### About the token
 

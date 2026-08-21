@@ -12,8 +12,12 @@ sealed class CheckResult {
     /** The API answered: [taken] is false when the username is free. */
     data class Ok(val taken: Boolean) : CheckResult()
 
-    /** Rate limited; wait [retryAfterMs] before the next attempt. */
-    data class RateLimited(val retryAfterMs: Long) : CheckResult()
+    /**
+     * Rate limited; wait [retryAfterMs] before the next attempt. [shared] marks Discord's
+     * `x-ratelimit-scope: shared` — a global pool contended by everyone using the public
+     * endpoint, which no amount of pacing can win.
+     */
+    data class RateLimited(val retryAfterMs: Long, val shared: Boolean = false) : CheckResult()
 
     /** Discord rejected the name itself (reserved word, blocked term). Skip it. */
     data class Invalid(val reason: String) : CheckResult()
@@ -120,7 +124,11 @@ class DiscordClient(private val token: String) {
                 val text = resp.body?.string().orEmpty()
                 when (resp.code) {
                     200 -> parseOk(text)
-                    429 -> CheckResult.RateLimited(parseRetryAfter(text, resp.header("Retry-After")))
+                    429 -> CheckResult.RateLimited(
+                        parseRetryAfter(text, resp.header("Retry-After")),
+                        shared = resp.header("x-ratelimit-scope")
+                            .equals("shared", ignoreCase = true) && !endpoint.needsToken
+                    )
                     400 -> parseBadRequest(text)
                     401 -> CheckResult.Failure(
                         "401 on ${endpoint.label} — token rejected. Paste it without the " +
