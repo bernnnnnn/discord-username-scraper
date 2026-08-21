@@ -138,7 +138,7 @@ class ScraperService : Service() {
                     okStreak++
                     if (prefs.autoPace && okStreak >= SPEED_UP_AFTER) {
                         okStreak = 0
-                        paceMs = (paceMs * 9 / 10).coerceAtLeast(prefs.delayMs.toLong())
+                        paceMs = (paceMs * 19 / 20).coerceAtLeast(prefs.delayMs.toLong())
                     }
                     ScraperState.update {
                         it.copy(
@@ -359,7 +359,10 @@ class ScraperService : Service() {
         private const val FOUND_NOTIF_BASE = 2000
         private const val BATCH_SIZE = 20
         private const val MAX_CONSECUTIVE_REJECTS = 25
-        private const val SPEED_UP_AFTER = 25
+        // A 429 costs about a minute of backoff, so probing for a faster pace is only worth it
+        // after a long clean streak, and in small steps. Speeding up eagerly just buys another
+        // stall: measured against the live endpoint, backoff ate 420 of 472 seconds.
+        private const val SPEED_UP_AFTER = 200
         private const val MAX_PACE_MS = 30_000L
 
         fun start(context: Context) {
