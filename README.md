@@ -1,0 +1,83 @@
+# Noctra
+
+An Android app that hunts for unused 4-character Discord usernames in the background and keeps
+a permanent log of everything it has tried, so stopping and restarting never loses progress.
+
+Themed after the [Noctra](https://raw.githubusercontent.com/backroomsa3-a11y/Mythemesssss/refs/heads/main/E.json)
+Discord theme: AMOLED black, slate-blue accents (`#3C4856`), pale blue highlights (`#D8E8FF`),
+with a matching crescent-moon adaptive launcher icon.
+
+## What it does
+
+- **Background scanning.** A foreground service walks the 4-character name space, one check at a
+  time, at a pace you set. It keeps running with the screen off and survives being swiped away
+  (Android restarts it and it picks up exactly where it stopped).
+- **Remembers everything.** Every answer is written to SQLite. Two tabs read from it:
+  - **Available** — names Discord reported as free.
+  - **Tried** — every name checked, free or taken, newest first.
+- **Never re-checks.** Progress is a single cursor into a shuffled walk of the name space, saved
+  after each batch. Names already in the log are skipped without a network call.
+- **Notifies on a hit.** Each free name fires its own notification; tap a row in either tab to
+  copy the name.
+- **Stays responsive.** No Compose, no ORM — plain views, a recycler with paged queries
+  (150 rows at a time), batched writes, and list refreshes throttled and suppressed while you
+  are scrolled down. The Tried tab stays smooth at hundreds of thousands of rows.
+
+## Settings
+
+| Setting | Default | Notes |
+| --- | --- | --- |
+| Character set | `a–z 0–9` (1,679,616 names) | Also `a–z` (456,976) or `a–z 0–9 _` (1,874,161). Changing it restarts the walk but keeps the log. |
+| Delay between checks | 1200 ms | Lower is faster and more likely to hit a rate limit. Minimum 250 ms. |
+| Stop after N found | 0 | 0 keeps scanning forever. |
+| Discord token | empty | Optional — see below. |
+
+### About the token
+
+No account is needed. With the token field blank the app calls the same public endpoint the
+Discord signup form uses (`unique-username/username-attempt-unauthed`), which answers
+"is this name taken?" and nothing else.
+
+If you do paste a user token, the app uses the authenticated variant of the same endpoint
+instead. The token is stored in this app's private `SharedPreferences` on your device and is
+sent to `discord.com` only. Nothing else is transmitted anywhere.
+
+The app only *asks* whether a name is free — it never registers or claims one. Rate limits are
+always honoured: a 429 makes it wait for exactly the `retry_after` Discord returns, and network
+errors back off exponentially. Automated querying is a grey area under Discord's ToS; keep the
+delay sane and use it at your own risk.
+
+## Getting the APK
+
+Every push builds a signed release APK in GitHub Actions:
+
+- **Releases → `latest`** has the `.apk` attached, or
+- **Actions → Build APK → the run → Artifacts → `noctra-apk`**.
+
+Sideload it (Android 8.0 / API 26 and up). On first launch allow notifications, then hit
+**Start scanning**. Also worth doing: exclude Noctra from battery optimisation
+(Settings → Apps → Noctra → Battery → Unrestricted) so long scans are not paused.
+
+## Building locally
+
+```bash
+./gradlew assembleRelease     # app/build/outputs/apk/release/app-release.apk
+```
+
+Needs JDK 17 and an Android SDK with platform 34.
+
+`noctra-release.jks` is committed so that every build — local or CI — is signed with the same
+key and installs as an update over the previous one. It guards nothing; if you plan to
+distribute the app, replace it and move the credentials in `app/build.gradle.kts` into
+Gradle properties or CI secrets.
+
+## Layout
+
+| File | Role |
+| --- | --- |
+| `NameSpace.kt` | Maps a cursor to a name via a coprime-stride bijection, so the walk looks shuffled but resumes from one integer. |
+| `DiscordClient.kt` | The single availability request, with 429/backoff handling. |
+| `ScraperService.kt` | Foreground service: the loop, batched writes, notifications, wake lock. |
+| `Db.kt` | SQLite log, paged reads, counts. |
+| `ScraperState.kt` | The stats the UI observes. |
+| `MainActivity.kt` / `ListFragment.kt` | Header stats, the two tabs, paging. |

@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <style name="Theme.Noctra" parent="Theme.Material3.Dark.NoActionBar">
+        <item name="colorPrimary">@color/accent_light</item>
+        <item name="colorOnPrimary">@color/amoled</item>
+        <item name="colorPrimaryContainer">@color/slate_blue</item>
+        <item name="colorOnPrimaryContainer">@color/feather_white</item>
+        <item name="colorSecondary">@color/slate_blue</item>
+        <item name="colorOnSecondary">@color/feather_white</item>
+        <item name="colorSurface">@color/obsidian</item>
+        <item name="colorOnSurface">@color/feather_soft</item>
+        <item name="colorSurfaceVariant">@color/surface_high</item>
+        <item name="colorOnSurfaceVariant">@color/secondary_text</item>
+        <item name="colorOutline">@color/border_strong</item>
+        <item name="colorOutlineVariant">@color/border_faint</item>
+        <item name="android:colorBackground">@color/amoled</item>
+        <item name="android:windowBackground">@color/amoled</item>
+        <item name="android:statusBarColor">@color/amoled</item>
+        <item name="android:navigationBarColor">@color/amoled</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:textColorPrimary">@color/feather_soft</item>
+        <item name="android:textColorSecondary">@color/secondary_text</item>
+        <item name="materialAlertDialogTheme">@style/Theme.Noctra.Dialog</item>
+    </style>
+
+    <style name="Theme.Noctra.Dialog" parent="ThemeOverlay.Material3.MaterialAlertDialog">
+        <item name="colorSurface">@color/surface_high</item>
+        <item name="colorOnSurface">@color/feather_soft</item>
+        <item name="android:textColorPrimary">@color/feather_soft</item>
+        <item name="colorPrimary">@color/accent_light</item>
+    </style>
+
+    <style name="StatLabel">
+        <item name="android:textSize">11sp</item>
+        <item name="android:textColor">@color/muted</item>
+        <item name="android:letterSpacing">0.09</item>
+        <item name="android:textAllCaps">true</item>
+    </style>
+
+    <style name="StatValue">
+        <item name="android:textSize">22sp</item>
+        <item name="android:textColor">@color/feather_white</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+    </style>
+</resources>

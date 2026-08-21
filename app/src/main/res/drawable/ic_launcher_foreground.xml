@@ -1,0 +1,27 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Crescent: outer circle centred (58,54) r30, bitten by a circle centred (74,54) r28. -->
+    <path android:pathData="M69.625,26.343 A30,30 0 1,0 69.625,81.657 A28,28 0 0,1 69.625,26.343 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="linear"
+                android:startX="28"
+                android:startY="24"
+                android:endX="70"
+                android:endY="84">
+                <item android:offset="0.0" android:color="#FFFFFFFF" />
+                <item android:offset="0.5" android:color="#FFD8E8FF" />
+                <item android:offset="1.0" android:color="#FF8FA5BE" />
+            </gradient>
+        </aapt:attr>
+    </path>
+    <!-- Four marks for the four characters being hunted. -->
+    <path android:fillColor="#FF3C4856" android:pathData="M78,40m-3,0a3,3 0 1,0 6,0a3,3 0 1,0 -6,0" />
+    <path android:fillColor="#FF69788D" android:pathData="M84,50m-2.6,0a2.6,2.6 0 1,0 5.2,0a2.6,2.6 0 1,0 -5.2,0" />
+    <path android:fillColor="#FF3C4856" android:pathData="M83,62m-2.2,0a2.2,2.2 0 1,0 4.4,0a2.2,2.2 0 1,0 -4.4,0" />
+    <path android:fillColor="#FF69788D" android:pathData="M76,71m-1.8,0a1.8,1.8 0 1,0 3.6,0a1.8,1.8 0 1,0 -3.6,0" />
+</vector>

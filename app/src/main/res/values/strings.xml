@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Noctra</string>
+    <string name="subtitle">4-character username scout</string>
+
+    <string name="tab_available">Available</string>
+    <string name="tab_tried">Tried</string>
+
+    <string name="start">Start scanning</string>
+    <string name="stop">Stop</string>
+    <string name="trying">Trying %1$s</string>
+
+    <string name="label_checked">Checked</string>
+    <string name="label_available">Available</string>
+    <string name="label_rate">Rate</string>
+
+    <string name="progress_label">%1$s / %2$s of the space · %3$s%%</string>
+    <string name="charset_label">Alphabet %1$s · %2$d ms between checks</string>
+
+    <string name="status_free">free</string>
+    <string name="status_taken">taken</string>
+    <string name="copied">Copied %1$s</string>
+
+    <string name="empty_available">Nothing free yet. Start a scan and any unused name lands here.</string>
+    <string name="empty_tried">No names tried yet.</string>
+
+    <string name="action_settings">Settings</string>
+    <string name="action_export">Export available</string>
+    <string name="action_clear_taken">Clear taken log</string>
+    <string name="action_reset">Reset everything</string>
+
+    <string name="clear_taken_body">Removes every taken name from the log. Available names and your scan position are kept.</string>
+    <string name="reset_body">Wipes both tabs and restarts the scan from the beginning of the name space.</string>
+    <string name="nothing_to_export">No available names yet.</string>
+
+    <string name="clear">Clear</string>
+    <string name="reset">Reset</string>
+    <string name="save">Save</string>
+
+    <string name="settings_charset">Character set</string>
+    <string name="settings_delay">Delay between checks (ms)</string>
+    <string name="settings_stop_after">Stop after N found (0 = never)</string>
+    <string name="settings_token">Discord token (optional)</string>
+    <string name="settings_token_help">Leave blank to use the public signup check. A token is stored on this device only.</string>
+</resources>

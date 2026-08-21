@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Palette lifted from the Noctra Discord theme (E.json). -->
+<resources>
+    <color name="amoled">#000000</color>
+    <color name="obsidian">#0E0F12</color>
+    <color name="surface">#101317</color>
+    <color name="surface_alt">#14181D</color>
+    <color name="surface_high">#15181D</color>
+    <color name="border_faint">#1B2027</color>
+    <color name="border_strong">#2B313A</color>
+    <color name="modifier_accent">#202733</color>
+    <color name="slate_blue">#3C4856</color>
+    <color name="slate_deep">#313C49</color>
+    <color name="steel">#69788D</color>
+    <color name="steel_dim">#596474</color>
+    <color name="muted">#7A8796</color>
+    <color name="secondary_text">#B8C2CD</color>
+    <color name="feather_soft">#F4F6F8</color>
+    <color name="feather_white">#FFFFFF</color>
+    <color name="accent_light">#D8E8FF</color>
+</resources>
