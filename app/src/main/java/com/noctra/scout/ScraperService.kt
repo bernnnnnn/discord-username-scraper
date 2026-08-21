@@ -71,6 +71,7 @@ class ScraperService : Service() {
 
         var foundThisRun = 0
         var skipped = 0
+        var rejects = 0
         var backoff = 2_000L
         windowStart = System.currentTimeMillis()
         windowCount = 0
@@ -122,6 +123,7 @@ class ScraperService : Service() {
             when (val result = client.check(name)) {
                 is CheckResult.Ok -> {
                     backoff = 2_000L
+                    rejects = 0
                     val free = !result.taken
                     buffer.add(Entry(name, free, System.currentTimeMillis()))
                     prefs.cursor = cursor + 1
@@ -147,6 +149,14 @@ class ScraperService : Service() {
                 }
 
                 is CheckResult.Invalid -> {
+                    // A handful of names really are reserved, but a long run of rejections means
+                    // the request shape is wrong — stop rather than log the whole space as taken.
+                    rejects++
+                    if (rejects >= MAX_CONSECUTIVE_REJECTS) {
+                        flush()
+                        stopEverything("Discord rejected $rejects names in a row: ${result.reason}")
+                        return
+                    }
                     // Discord will not hand out this name at all — record it as taken and move on.
                     buffer.add(Entry(name, false, System.currentTimeMillis()))
                     prefs.cursor = cursor + 1
@@ -310,6 +320,7 @@ class ScraperService : Service() {
         private const val NOTIF_ID = 1001
         private const val FOUND_NOTIF_BASE = 2000
         private const val BATCH_SIZE = 20
+        private const val MAX_CONSECUTIVE_REJECTS = 25
 
         fun start(context: Context) {
             val i = Intent(context, ScraperService::class.java)

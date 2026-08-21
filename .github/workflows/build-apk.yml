@@ -8,9 +8,14 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: build-apk-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
 
@@ -21,8 +26,16 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
 
+      - name: Show Android SDK state
+        run: |
+          echo "ANDROID_HOME=$ANDROID_HOME"
+          ls "$ANDROID_HOME/platforms" || true
+          ls "$ANDROID_HOME/build-tools" || true
+          ls "$ANDROID_HOME/licenses" || true
+
       - name: Build release APK
-        run: ./gradlew --no-daemon assembleRelease
+        # </dev/null so anything that tries to prompt fails fast instead of hanging the job.
+        run: ./gradlew --no-daemon --stacktrace assembleRelease < /dev/null
 
       - name: Name the artifact
         id: apk

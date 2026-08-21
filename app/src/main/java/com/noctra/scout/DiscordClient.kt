@@ -63,6 +63,9 @@ class DiscordClient(private val token: String) {
                     400 -> parseBadRequest(text)
                     401 -> CheckResult.Failure("401 unauthorized — the saved token is invalid", true)
                     403 -> CheckResult.Failure("403 forbidden — request blocked by Discord", true)
+                    404, 405 -> CheckResult.Failure(
+                        "HTTP ${resp.code} — Discord moved this endpoint", true
+                    )
                     in 500..599 -> CheckResult.Failure("Discord returned ${resp.code}", false)
                     else -> CheckResult.Failure("HTTP ${resp.code}", false)
                 }
