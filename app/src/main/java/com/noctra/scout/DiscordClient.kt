@@ -240,10 +240,13 @@ class DiscordClient(private val token: String, proxies: List<ProxySpec> = emptyL
     }
 
     /**
-     * SOCKS credentials can't ride on an HTTP header, so OkHttp asks the JVM's default
+     * SOCKS credentials can't ride on an HTTP header, so the JVM's SOCKS client asks the default
      * [java.net.Authenticator] for them. Install one keyed by host:port covering every SOCKS proxy
-     * that carries credentials. It only ever answers for those hosts, so it stays inert for HTTP
-     * proxies (handled per-client above) and for direct connections.
+     * that carries credentials, and match purely on that key: the JVM asks for SOCKS auth as
+     * `RequestorType.SERVER` (the proxy host *is* the server it is talking to), not `PROXY`, so a
+     * type check would reject the very request it needs to answer. Keying by host:port keeps it
+     * inert everywhere else — the map only holds proxy hosts, never Discord's, and HTTP-proxy and
+     * origin-server auth take other paths entirely.
      */
     private fun installSocksAuth(proxies: List<ProxySpec>) {
         val credentials = proxies
@@ -253,8 +256,8 @@ class DiscordClient(private val token: String, proxies: List<ProxySpec> = emptyL
 
         JavaAuthenticator.setDefault(object : JavaAuthenticator() {
             override fun getPasswordAuthentication(): PasswordAuthentication? {
-                if (requestorType != RequestorType.PROXY) return null
-                return credentials["$requestingHost:$requestingPort"]
+                val host = requestingHost ?: requestingSite?.hostName ?: return null
+                return credentials["$host:$requestingPort"]
             }
         })
     }
