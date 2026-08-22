@@ -1,7 +1,24 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
 }
+
+// Release signing is loaded from outside the repo so no key or password is ever
+// committed. Values come from (in order) a local, git-ignored `keystore.properties`
+// at the project root, or environment variables (used by CI). If none are present
+// the release build simply falls back to the auto-generated debug key, so a plain
+// checkout still builds.
+val keystorePropsFile = rootProject.file("keystore.properties")
+val keystoreProps = Properties().apply {
+    if (keystorePropsFile.exists()) keystorePropsFile.inputStream().use { load(it) }
+}
+fun signingValue(propKey: String, envKey: String): String? =
+    keystoreProps.getProperty(propKey) ?: System.getenv(envKey)
+
+val releaseStoreFile: java.io.File? =
+    signingValue("storeFile", "KEYSTORE_FILE")?.let { rootProject.file(it) }?.takeIf { it.exists() }
 
 android {
     namespace = "com.noctra.scout"
@@ -17,20 +34,24 @@ android {
 
     signingConfigs {
         create("release") {
-            storeFile = rootProject.file("noctra-release.jks")
-            storePassword = "noctra-signing"
-            keyAlias = "noctra"
-            keyPassword = "noctra-signing"
+            if (releaseStoreFile != null) {
+                storeFile = releaseStoreFile
+                storePassword = signingValue("storePassword", "KEYSTORE_PASSWORD")
+                keyAlias = signingValue("keyAlias", "KEY_ALIAS") ?: "noctra"
+                keyPassword = signingValue("keyPassword", "KEY_PASSWORD")
+            }
         }
     }
 
     buildTypes {
         release {
             isMinifyEnabled = false
-            signingConfig = signingConfigs.getByName("release")
-        }
-        debug {
-            signingConfig = signingConfigs.getByName("release")
+            // Use the real release key when one is configured, otherwise fall back to
+            // the debug key so the build never fails just because signing isn't set up.
+            signingConfig = if (releaseStoreFile != null)
+                signingConfigs.getByName("release")
+            else
+                signingConfigs.getByName("debug")
         }
     }
 

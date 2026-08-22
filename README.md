@@ -132,10 +132,18 @@ Sideload it (Android 8.0 / API 26 and up). On first launch allow notifications, 
 
 Needs JDK 17 and an Android SDK with platform 34.
 
-`noctra-release.jks` is committed so that every build — local or CI — is signed with the same
-key and installs as an update over the previous one. It guards nothing; if you plan to
-distribute the app, replace it and move the credentials in `app/build.gradle.kts` into
-Gradle properties or CI secrets.
+### Signing
+
+No keystore or password is committed. Release signing is loaded from outside the repo:
+
+- **Locally:** copy `keystore.properties.example` to `keystore.properties` (git-ignored) and
+  point it at your own key. Generate one with
+  `keytool -genkeypair -v -keystore my-release.jks -alias noctra -keyalg RSA -keysize 2048 -validity 10000`.
+- **CI:** set the repository secrets `RELEASE_KEYSTORE_BASE64` (the `.jks` base64-encoded),
+  `RELEASE_KEYSTORE_PASSWORD`, `RELEASE_KEY_ALIAS`, and `RELEASE_KEY_PASSWORD`.
+
+If none are configured the build falls back to the auto-generated debug key, so a plain
+checkout still builds — it just won't install as an update over a differently-signed copy.
 
 ## Layout
 

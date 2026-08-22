@@ -5,3 +5,8 @@ local.properties
 .idea/
 .DS_Store
 captures/
+
+# Keystores / signing (never commit secrets)
+*.jks
+*.keystore
+keystore.properties

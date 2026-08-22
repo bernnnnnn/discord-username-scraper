@@ -33,8 +33,24 @@ jobs:
           ls "$ANDROID_HOME/build-tools" || true
           ls "$ANDROID_HOME/licenses" || true
 
+      - name: Decode release keystore (if configured)
+        env:
+          KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.jks"
+            echo "KEYSTORE_FILE=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
+            echo "Release keystore configured; release build will be signed with it."
+          else
+            echo "No RELEASE_KEYSTORE_BASE64 secret set; falling back to debug signing."
+          fi
+
       - name: Build release APK
         # </dev/null so anything that tries to prompt fails fast instead of hanging the job.
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
         run: ./gradlew --no-daemon --stacktrace assembleRelease < /dev/null
 
       - name: Name the artifact
@@ -58,7 +74,8 @@ jobs:
           tag_name: latest
           name: Noctra (latest build)
           body: |
-            Debug-free release build of Noctra, signed with the repo keystore.
+            Release build of Noctra. Signed with the project's release key when the
+            signing secrets are configured, otherwise with a debug key.
             Commit `${{ github.sha }}` (`${{ github.ref_name }}`).
 
             Download the `.apk` below and sideload it (Settings -> Apps -> Special access -> Install unknown apps).
