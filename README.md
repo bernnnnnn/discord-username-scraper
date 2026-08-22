@@ -32,6 +32,7 @@ with a matching crescent-moon adaptive launcher icon.
 | Auto-pace | on | Multiplies the delay by 1.5 on every 429 (up to 30 s) and shaves 10% off after 25 clean checks, so the scan converges on the fastest rate Discord will allow instead of you guessing. |
 | Stop after N found | 0 | 0 keeps scanning forever. |
 | Discord token | empty | Optional — see below. |
+| Proxies | empty | Optional. One per line; checks rotate across them so the per-IP limit is split over several addresses. See below. |
 
 ### If you keep getting rate limited
 
@@ -42,7 +43,23 @@ carries on from the same cursor. But if it stalls constantly, in order:
    actually in use and how many 429s this run has taken.
 2. **Add a token** (Settings → Discord token). The unauthenticated endpoint is throttled per IP;
    the authenticated one is throttled per account, which is usually the more generous bucket.
-3. **Raise the delay floor.** If auto-pacing has parked at the 30 s ceiling, the account or IP is
+3. **Add proxies** (Settings → Proxies). The public check is throttled per source IP, so sending
+   consecutive checks out through different proxies spreads that budget across several addresses:
+   each IP sees only its share of the traffic, gets rate limited less, and auto-pace converges on a
+   faster overall delay. One proxy per line (or comma-separated), in any of:
+
+   ```
+   host:port
+   host:port:user:pass
+   http://user:pass@host:port
+   socks5://host:port
+   ```
+
+   No scheme means HTTP. HTTP and SOCKS5 (including authenticated) are supported; unparseable lines
+   are ignored, and a dead proxy just costs a retry before the next one is tried. The footer shows
+   how many proxies are in rotation. Datacenter/VPN IPs are often refused with a 403 — residential
+   proxies fare better.
+4. **Raise the delay floor.** If auto-pacing has parked at the 30 s ceiling, the account or IP is
    in a slow bucket and a bigger floor will stall less.
 
 There is no way to check faster by attempting a real username change: `PATCH /users/@me` has no

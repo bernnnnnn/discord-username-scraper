@@ -30,6 +30,7 @@ object SettingsDialog {
         b.stopAfter.setText(prefs.stopAfter.toString())
         b.autoPace.isChecked = prefs.autoPace
         b.token.setText(prefs.token)
+        b.proxies.setText(prefs.proxies)
 
         MaterialAlertDialogBuilder(context)
             .setTitle(R.string.action_settings)
@@ -41,6 +42,7 @@ object SettingsDialog {
                 prefs.stopAfter = b.stopAfter.text.toString().toIntOrNull() ?: 0
                 prefs.autoPace = b.autoPace.isChecked
                 prefs.token = b.token.text.toString()
+                prefs.proxies = b.proxies.text.toString()
                 if (chosenCharset != prefs.charsetId) {
                     // A different alphabet is a different walk, so the cursor has to restart.
                     // The log is kept: names already answered stay in the tabs.

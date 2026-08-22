@@ -39,6 +39,17 @@ class Prefs(context: Context) {
         get() = sp.getString(KEY_TOKEN, "").orEmpty()
         set(v) = sp.edit().putString(KEY_TOKEN, sanitizeToken(v)).apply()
 
+    /**
+     * Optional proxy list (one per line, or comma-separated). Checks rotate across these so the
+     * per-IP rate limit is spread over several addresses. Stored on this device only.
+     */
+    var proxies: String
+        get() = sp.getString(KEY_PROXIES, "").orEmpty()
+        set(v) = sp.edit().putString(KEY_PROXIES, v.trim()).apply()
+
+    /** The proxy list parsed into usable specs; unparseable entries are dropped. */
+    fun proxyList(): List<ProxySpec> = ProxySpec.parseList(proxies)
+
     /** True while the service is meant to be running (used to restore after a process restart). */
     var running: Boolean
         get() = sp.getBoolean(KEY_RUNNING, false)
@@ -76,6 +87,7 @@ class Prefs(context: Context) {
         private const val KEY_STOP_AFTER = "stop_after"
         private const val KEY_AUTO_PACE = "auto_pace"
         private const val KEY_TOKEN = "token"
+        private const val KEY_PROXIES = "proxies"
         private const val KEY_RUNNING = "running"
     }
 }

@@ -66,7 +66,7 @@ class ScraperService : Service() {
 
     private suspend fun runLoop() {
         val space = prefs.nameSpace()
-        val client = DiscordClient(prefs.token)
+        val client = DiscordClient(prefs.token, prefs.proxyList())
         val (checked, available) = db.counts()
 
         var foundThisRun = 0
@@ -228,10 +228,17 @@ class ScraperService : Service() {
     }
 
     /** Says which endpoint the run settled on, including when a bad token was skipped past. */
-    private fun runStatus(client: DiscordClient): String = when {
-        client.skippedAuth -> "Running — token rejected, using the public check"
-        prefs.token.isNotBlank() -> "Running (token)"
-        else -> "Running"
+    private fun runStatus(client: DiscordClient): String {
+        val base = when {
+            client.skippedAuth -> "Running — token rejected, using the public check"
+            prefs.token.isNotBlank() -> "Running (token)"
+            else -> "Running"
+        }
+        return if (client.proxyCount > 0) {
+            "$base · ${client.proxyCount} ${if (client.proxyCount == 1) "proxy" else "proxies"}"
+        } else {
+            base
+        }
     }
 
     /** The configured wait plus a little jitter, so requests never land on a fixed cadence. */

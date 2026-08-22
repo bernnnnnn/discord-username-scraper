@@ -46,4 +46,6 @@
     <string name="settings_auto_pace_help">Slows down when Discord rate limits and speeds back up when it stops, so the scan settles on the fastest rate it will allow. The delay above becomes the floor.</string>
     <string name="settings_token">Discord token (optional)</string>
     <string name="settings_token_help">Leave blank to use the public signup check. A token is stored on this device only.</string>
+    <string name="settings_proxies">Proxies (optional, one per line)</string>
+    <string name="settings_proxies_help">Checks rotate across these so the per-IP rate limit is split over several addresses. Formats: host:port, host:port:user:pass, or scheme://user:pass@host:port (scheme = http or socks5). Stored on this device only.</string>
 </resources>

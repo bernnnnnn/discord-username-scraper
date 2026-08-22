@@ -1,12 +1,18 @@
 package com.noctra.scout
 
 import android.util.Base64
+import okhttp3.Authenticator
+import okhttp3.Credentials
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
+import java.net.Authenticator as JavaAuthenticator
+import java.net.PasswordAuthentication
+import java.net.Proxy
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicInteger
 
 sealed class CheckResult {
     /** The API answered: [taken] is false when the username is free. */
@@ -47,15 +53,57 @@ private data class Endpoint(val label: String, val url: String, val needsToken: 
  *
  * Discord has moved this endpoint before, so rather than hard-coding one path the client
  * probes the known candidates on the first check and locks onto whichever answers.
+ *
+ * When [proxies] is non-empty each check is sent out through the next proxy in turn. Discord's
+ * public availability check is throttled per source IP, so rotating IPs is what lets the scan
+ * sustain a faster pace before any one of them gets a 429; with no proxies configured the client
+ * connects directly, exactly as before.
  */
-class DiscordClient(private val token: String) {
+class DiscordClient(private val token: String, proxies: List<ProxySpec> = emptyList()) {
 
-    private val client = OkHttpClient.Builder()
+    private val base = OkHttpClient.Builder()
         .connectTimeout(15, TimeUnit.SECONDS)
         .readTimeout(20, TimeUnit.SECONDS)
         .writeTimeout(15, TimeUnit.SECONDS)
         .retryOnConnectionFailure(true)
         .build()
+
+    /**
+     * One OkHttp client per proxy (a direct client if none). SOCKS proxies authenticate at the
+     * socket level rather than over HTTP, so their credentials go through a process-wide default
+     * Authenticator keyed by host:port; HTTP proxies use a per-client [Authenticator] below, which
+     * is both cleaner and doesn't leak into anything else the process might connect to.
+     */
+    private val clients: List<OkHttpClient> = if (proxies.isEmpty()) {
+        listOf(base)
+    } else {
+        installSocksAuth(proxies)
+        proxies.map { spec ->
+            base.newBuilder()
+                .proxy(spec.toProxy())
+                .apply {
+                    if (spec.type == Proxy.Type.HTTP && spec.hasAuth) {
+                        val credential = Credentials.basic(spec.user.orEmpty(), spec.pass.orEmpty())
+                        proxyAuthenticator(Authenticator { _, response ->
+                            if (response.request.header("Proxy-Authorization") != null) return@Authenticator null
+                            response.request.newBuilder()
+                                .header("Proxy-Authorization", credential)
+                                .build()
+                        })
+                    }
+                }
+                .build()
+        }
+    }
+
+    /** How many proxies the checks are being spread across; 0 means direct connections. */
+    val proxyCount: Int = proxies.size
+
+    private val next = AtomicInteger(0)
+
+    /** The client to send the next check through, round-robining across the proxy pool. */
+    private fun nextClient(): OkHttpClient =
+        clients[(next.getAndIncrement() and Int.MAX_VALUE) % clients.size]
 
     private val candidates: List<Endpoint> = buildList {
         if (token.isNotBlank()) {
@@ -73,7 +121,9 @@ class DiscordClient(private val token: String) {
         get() = resolved?.label.orEmpty()
 
     fun check(username: String): CheckResult {
-        resolved?.let { return request(it, username) }
+        // One proxy is chosen per check so a single check's probing all goes out the same IP.
+        val http = nextClient()
+        resolved?.let { return request(it, username, http) }
 
         // First call of the run: find an endpoint that answers. A missing path or a refused
         // token says nothing about the remaining candidates, so keep going — a bad token must
@@ -81,7 +131,7 @@ class DiscordClient(private val token: String) {
         val tried = ArrayList<String>(candidates.size)
         var last: CheckResult.Failure? = null
         for (candidate in candidates) {
-            val result = request(candidate, username)
+            val result = request(candidate, username, http)
             if (result is CheckResult.Failure && result.tryNext) {
                 tried.add("${candidate.label} (${result.shortReason()})")
                 last = result
@@ -105,7 +155,7 @@ class DiscordClient(private val token: String) {
     var skippedAuth = false
         private set
 
-    private fun request(endpoint: Endpoint, username: String): CheckResult {
+    private fun request(endpoint: Endpoint, username: String, http: OkHttpClient): CheckResult {
         val body = JSONObject().put("username", username).toString().toRequestBody(JSON)
         val builder = Request.Builder()
             .url(endpoint.url)
@@ -120,7 +170,7 @@ class DiscordClient(private val token: String) {
         if (endpoint.needsToken) builder.header("Authorization", token)
 
         return try {
-            client.newCall(builder.build()).execute().use { resp ->
+            http.newCall(builder.build()).execute().use { resp ->
                 val text = resp.body?.string().orEmpty()
                 when (resp.code) {
                     200 -> parseOk(text)
@@ -187,6 +237,26 @@ class DiscordClient(private val token: String) {
             else -> 5.0
         }
         return (seconds * 1000).toLong().coerceIn(1_000L, 15 * 60_000L)
+    }
+
+    /**
+     * SOCKS credentials can't ride on an HTTP header, so OkHttp asks the JVM's default
+     * [java.net.Authenticator] for them. Install one keyed by host:port covering every SOCKS proxy
+     * that carries credentials. It only ever answers for those hosts, so it stays inert for HTTP
+     * proxies (handled per-client above) and for direct connections.
+     */
+    private fun installSocksAuth(proxies: List<ProxySpec>) {
+        val credentials = proxies
+            .filter { it.type == Proxy.Type.SOCKS && it.hasAuth }
+            .associate { it.label to PasswordAuthentication(it.user.orEmpty(), it.pass.orEmpty().toCharArray()) }
+        if (credentials.isEmpty()) return
+
+        JavaAuthenticator.setDefault(object : JavaAuthenticator() {
+            override fun getPasswordAuthentication(): PasswordAuthentication? {
+                if (requestorType != RequestorType.PROXY) return null
+                return credentials["$requestingHost:$requestingPort"]
+            }
+        })
     }
 
     companion object {

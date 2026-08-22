@@ -96,5 +96,31 @@
             android:textSize="11sp"
             android:textColor="@color/muted"
             android:text="@string/settings_token_help" />
+
+        <com.google.android.material.textfield.TextInputLayout
+            style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:hint="@string/settings_proxies">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/proxies"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="top"
+                android:inputType="textMultiLine|textNoSuggestions"
+                android:minLines="3"
+                android:maxLines="6"
+                android:textSize="13sp" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:textSize="11sp"
+            android:textColor="@color/muted"
+            android:text="@string/settings_proxies_help" />
     </LinearLayout>
 </ScrollView>
